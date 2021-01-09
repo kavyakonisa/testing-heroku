@@ -42,5 +42,24 @@ def get_dish(dish_id):
 
   return jsonify(results)
 
+
+@app.route('/app/v1/resources/dishes/<int:dish_id>', methods=['DELETE'])
+def delete_task(dish_id):
+  dish = [dish for dish in dishes if dish['id'] == dish_id]
+  if len(dish) == 0:
+    abort(404)
+  dishes.remove(dish[0])
+  return jsonify({'dish_id':dish[0]['id']})  
+
+@app.route('/app/v1/resources/dishes', methods=['DELETE'])
+def api_delete_all():
+ if len(dishes) == 0:
+  abort(404)
+ while(len(dishes)!=0): 
+  for dish in dishes:
+   dishes.remove(dish) 
+ return jsonify({'result': True}) 
+
+
 if __name__ == "__main__":
  app.run()
