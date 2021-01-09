@@ -1,6 +1,22 @@
 from flask import Flask
 from flask import request, jsonify, make_response
+from flask_httpauth import HTTPBasicAuth
 app = Flask(__name__)
+
+auth=HTTPBasicAuth()
+
+@auth.get_password
+def get_password(username):
+  if username=='kavya':
+    return 'python'
+  return None 
+
+@auth.error_handler
+def unauthorized():
+    response = jsonify({'error':'Unauthorized access'})
+    return response, 404
+
+    
 dishes = [
     {'id': 0,
      'title': 'Chicken Biryani',
