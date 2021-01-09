@@ -16,7 +16,7 @@ def unauthorized():
     response = jsonify({'error':'Unauthorized access'})
     return response, 404
 
-    
+
 dishes = [
     {'id': 0,
      'title': 'Chicken Biryani',
@@ -44,10 +44,12 @@ def hello():
     return "Hello World!"
 
 @app.route('/app/v1/resources/dishes/all', methods=['GET'])
+@auth.login_required
 def api_all():
  return jsonify(dishes)
 
 @app.route('/app/v1/resources/dishes/<int:dish_id>', methods=['GET'])
+@auth.login_required
 def get_dish(dish_id):
    
   results = []
@@ -59,7 +61,7 @@ def get_dish(dish_id):
   return jsonify(results)
 
 @app.route('/app/v1/resources/dishes', methods=['POST'])
-
+@auth.login_required
 def add_dish():
   new_dish = {
         'id': dishes[-1]['id'] + 1,
@@ -77,6 +79,7 @@ def not_found(error):
 
 
 @app.route('/app/v1/resources/dishes/<int:dish_id>', methods=['PUT'])
+@auth.login_required
 def update_dish(dish_id):
     dish = [dish for dish in dishes if dish['id'] == dish_id]
     if len(dish) == 0:
@@ -89,6 +92,7 @@ def update_dish(dish_id):
 
 
 @app.route('/app/v1/resources/dishes/<int:dish_id>', methods=['DELETE'])
+@auth.login_required
 def delete_task(dish_id):
   dish = [dish for dish in dishes if dish['id'] == dish_id]
   if len(dish) == 0:
@@ -97,6 +101,7 @@ def delete_task(dish_id):
   return jsonify({'dish_id':dish[0]['id']})  
 
 @app.route('/app/v1/resources/dishes', methods=['DELETE'])
+@auth.login_required
 def api_delete_all():
  if len(dishes) == 0:
   return make_response(jsonify({'error': 'No dish'}), 400)
