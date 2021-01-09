@@ -43,7 +43,7 @@ def get_dish(dish_id):
   return jsonify(results)
 
 @app.route('/app/v1/resources/dishes', methods=['POST'])
-@auth.login_required
+
 def add_dish():
   new_dish = {
         'id': dishes[-1]['id'] + 1,
@@ -61,7 +61,6 @@ def not_found(error):
 
 
 @app.route('/app/v1/resources/dishes/<int:dish_id>', methods=['PUT'])
-@auth.login_required
 def update_dish(dish_id):
     dish = [dish for dish in dishes if dish['id'] == dish_id]
     if len(dish) == 0:
