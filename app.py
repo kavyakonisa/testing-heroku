@@ -66,7 +66,7 @@ def update_dish(dish_id):
     if len(dish) == 0:
         return make_response(jsonify({'error': 'No dish'}), 400)
     if not request.json:
-        return make_response(jsonify({'error': 'Not in json'}), 404)
+        return make_response(jsonify({'error': 'Not in json'}), 400)
     dish[0]['title'] = request.json.get('title', dish[0]['title'])
     dish[0]['cost'] = request.json.get('cost', dish[0]['cost'])
     return jsonify({'dish_id': dish[0]['id']})
@@ -76,7 +76,7 @@ def update_dish(dish_id):
 def delete_task(dish_id):
   dish = [dish for dish in dishes if dish['id'] == dish_id]
   if len(dish) == 0:
-    return make_response(jsonify({'error': 'No dish'}), 400))
+    return make_response(jsonify({'error': 'No dish'}), 400)
   dishes.remove(dish[0])
   return jsonify({'dish_id':dish[0]['id']})  
 
