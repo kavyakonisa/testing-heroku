@@ -1,7 +1,48 @@
 from flask import Flask
 from flask import request, jsonify, make_response
 from flask_httpauth import HTTPBasicAuth
+from flask_sqlalchemy import SQLAlchemy
+import os
+
 app = Flask(__name__)
+db=SQLAlchemy(app)
+
+
+class Dishes(db.Model):
+
+    __tablename__ = 'dishes'
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    dish_name = db.Column(
+        db.String(100),
+        index=True,
+        unique=True,
+        nullable=False
+    )
+
+    dish_cost = db.Column(
+        db.String(100),
+        index=True,
+        nullable=False
+    )
+
+    dish_image=db.Column(
+        db.String(100),
+        index=True,
+        nullable=False)
+
+    def __init__(self,dish_name,dish_cost,dish_image):
+      self.dish_name=dish_name
+      self.dish_cost=dish_cost
+      self.dish_image=dish_image
+
+db.create_all()
+
+
 #added the basic authentication using flask_httpauth
 auth=HTTPBasicAuth()
 #This callback function will use to obtain the password for a given user.
@@ -17,107 +58,103 @@ def unauthorized():
     response = jsonify({'error':'Unauthorized access'})
     return response, 404
 
-#create some test data for our website in the form of a list of dictionaries
-dishes = [
-    {'id': 0,
-     'title': 'Chicken Biryani',
-     'cost': '250',
-     },
-    {'id': 1,
-     'title': 'Prawns Biryani',
-     'cost': '450'},
-    {'id': 2,
-     'title': 'Mutton Biryani',
-     'cost': '350'},
-    {'id': 3,
-     'title': 'Chicken Biryani',
-     'cost': '250',
-      },
-    {'id': 4,
-     'title': 'Prawns Biryani',
-     'cost': '450'},
-    {'id': 5,
-     'title': 'Mutton Biryani',
-     'cost': '350'}
-]
-@app.route("/")
-def hello():
-    return "Hello World!"
 
-# A route to return all of the available dishes in our catalog
-@app.route('/app/v1/resources/dishes/all', methods=['GET'])
-@auth.login_required
-def api_all():
- return jsonify(dishes)
-
-# A route to return the details of the matched id dish in our catalog 
-@app.route('/app/v1/resources/dishes/<int:dish_id>', methods=['GET'])
-@auth.login_required
-def get_dish(dish_id):
-#create an empty list for our results   
-  results = []
-#loop through to find the dish that matches the dish id       
-  for dish in dishes:
-    if dish['id'] == dish_id:
-      results.append(dish)
-#Use the jsnify function from flask to convert our dishes dictionary in JSON format
-  return jsonify(results)
-
-
-# A route to add new dish to the dishes in our catalog 
-@app.route('/app/v1/resources/dishes', methods=['POST'])
-@auth.login_required
-def add_dish():
-#Add the contents of the new dish with increasing the id with 1 and other entities in json format
-  new_dish = {
-        'id': dishes[-1]['id'] + 1,
-        'title': request.json.get('title', ""),
-        'cost': request.json.get('cost', ""),
-         }
-  dishes.append(new_dish)
-  return jsonify({'new_dish_id': new_dish['id']}), 201
- 
 #This error handler is used to display the   
 @app.errorhandler(404)
 def not_found(error):
     return make_response(jsonify({'error': 'Not found'}), 404)
 
+@app.route("/")
+def hello():
+    return "Hello World!"
 
 
-# A route to modify the existing dishes in our catalog
-@app.route('/app/v1/resources/dishes/<int:dish_id>', methods=['PUT'])
+#create some test data for our website in the form of a list of dictionaries
+def menu(dish):
+  return {"dishID":dish.id,
+      "dishName":dish.dish_name,
+      "dishCost":dish.dish_cost,
+      "dishImage":dish.dish_image
+
+      }
+
+
+
+# A route to return all of the available dishes in our catalog
+@app.route('/app/v1/resources/dishes/<int:dish_id>', methods=['GET','PUT','DELETE'])
+@app.route('/app/v1/resources/dishes', methods=['GET','POST','PUT','DELETE'])
 @auth.login_required
-#Update the matched dish with the given id to its respective contents
-def update_dish(dish_id):
-    dish = [dish for dish in dishes if dish['id'] == dish_id]
-    if len(dish) == 0:
-        return make_response(jsonify({'error': 'No dish'}), 400)
-    if not request.json:
-        return make_response(jsonify({'error': 'Not in json'}), 400)
-    dish[0]['title'] = request.json.get('title', dish[0]['title'])
-    dish[0]['cost'] = request.json.get('cost', dish[0]['cost'])
-    return jsonify({'dish_id': dish[0]['id']})
+def dish_actions(dish_id=None):
+  
+  if request.method=="GET" and dish_id==None :
+    all_dishes=Dishes.query.all()
+    all_dishes=list(map(menu,all_dishes))
+    return jsonify(all_dishes)
+ 
+# A route to add new dish to the dishes in our catalog 
+  if request.method=="POST":
+    dishName = request.form["dishName"]
+    dishCost = request.form["dishCost"]
+    if request.files:
+        dishImage = request.files["dishImage"]
+        dishImage.save(os.path.join(dishImage.filename))
+        print("Image saved")
+    dish=Dishes(dishName,dishCost,dishImage.filename)
+    db.session.add(dish)
+    db.session.commit()
+    return jsonify(dish.id)    
 
-# A route to delete a dish of the matched id in the dishes in our catalog
-@app.route('/app/v1/resources/dishes/<int:dish_id>', methods=['DELETE'])
-@auth.login_required
-def delete_task(dish_id):
-  dish = [dish for dish in dishes if dish['id'] == dish_id]
-  if len(dish) == 0:
-    return make_response(jsonify({'error': 'No dish'}), 400)
-  dishes.remove(dish[0])
-  return jsonify({'dish_id':dish[0]['id']})  
 
 # A route to delete all dishes in our catalog
-@app.route('/app/v1/resources/dishes', methods=['DELETE'])
-@auth.login_required
-def api_delete_all():
- if len(dishes) == 0:
-  return make_response(jsonify({'error': 'No dish'}), 400)
- while(len(dishes)!=0): 
-  for dish in dishes:
-   dishes.remove(dish) 
- return jsonify({'result': True}) 
+  if request.method=="DELETE" and dish_id==None :
+    dishes=Dishes.query.all()
+    if dishes == None:
+      return make_response(jsonify({'error': 'No dish'}), 400)
+    del_list=[]
+    for dish in dishes:
+      del_list.append(dish.id)
+      db.session.delete(dish)
+    db.session.commit()
+    return jsonify(del_list)
+
+
+  if request.method==  "GET" and dish_id!=None:   
+    dish=Dishes.query.filter_by(id=dish_id).first()
+    if dish == None:
+      return make_response(jsonify({'error': 'No dish'}), 400)
+    else:
+      return jsonify(menu(dish))
+
+
+
+
+
+  if request.method=="PUT" and dish_id!=None:
+    dish=Dishes.query.filter_by(id=dish_id).first()
+    if dish == None:
+      return make_response(jsonify({'error': 'No dish'}), 400)
+    else:
+      dishName = request.form["dishName"]
+      dish.dish_name=dishName
+      dishCost = request.form["dishCost"]
+      dish.dish_cost=dishCost
+      dish.dish_image=dishName
+      db.session.commit()
+      return jsonify(dish_id)
+
+  if request.method=="DELETE" and dish_id!=None: 
+    dish=Dishes.query.filter_by(id=dish_id).first()
+    if dish == None:
+      return make_response(jsonify({'error': 'No dish'}), 400)
+    else:
+      dish_id=dish.id
+      db.session.delete(dish)
+      db.session.commit()
+      return jsonify(dish_id)
+
+
+
+  
 
 
 if __name__ == "__main__":
